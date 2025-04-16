@@ -1,0 +1,27 @@
+name: Deploy to Minikube
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Build and Deploy
+        run: |
+          # 스크립트 실행 권한 부여
+          chmod +x helm/build-images.sh
+          chmod +x helm/deploy.sh
+          chmod +x helm/cleanup.sh
+          
+          # Helm 차트 배포
+          cd helm
+          ./deploy.sh
+          
+          # 배포 상태 확인
+          kubectl get all
