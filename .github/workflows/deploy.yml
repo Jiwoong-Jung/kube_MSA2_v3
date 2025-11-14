@@ -14,6 +14,7 @@ jobs:
 
       - name: Build and Deploy
         run: |
+          eval $(minikube docker-env)
           # 스크립트 실행 권한 부여
           chmod +x helm/build-images.sh
           chmod +x helm/deploy.sh
