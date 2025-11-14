@@ -1,39 +1,37 @@
 #!/bin/bash
+set -e
 
-# Eureka 이미지 빌드
-echo "Building Eureka image..."
-docker build -t eureka:latest -f ../eureka-server/Dockerfile ../eureka-server
-if [ $? -ne 0 ]; then
-    echo "Failed to build Eureka image"
-    exit 1
-fi
+echo "🔧 Switching Docker environment to Minikube..."
+eval $(minikube docker-env)
 
-# Eureka 이미지를 Minikube에 로드
-echo "Loading Eureka image to Minikube..."
-minikube image load eureka:latest
-if [ $? -ne 0 ]; then
-    echo "Failed to load Eureka image to Minikube"
-    exit 1
-fi
+# --- Function to build image safely ---
+build_image() {
+    local name=$1
+    local path=$2
+    local dockerfile=$3
 
-# Gateway 이미지 빌드
-echo "Building Gateway image..."
-docker build -t gateway:latest -f ../gateway/Dockerfile ../gateway
-if [ $? -ne 0 ]; then
-    echo "Failed to build Gateway image"
-    exit 1
-fi
+    echo "🚀 Building $name image..."
+    docker build -t ${name}:latest -f $dockerfile $path
+    if [ $? -ne 0 ]; then
+        echo "❌ Failed to build ${name} image"
+        exit 1
+    fi
 
-# Gateway 이미지를 Minikube에 로드
-echo "Loading Gateway image to Minikube..."
-minikube image load gateway:latest
-if [ $? -ne 0 ]; then
-    echo "Failed to load Gateway image to Minikube"
-    exit 1
-fi
+    echo "📦 Loading $name image into Minikube..."
+    minikube image load ${name}:latest
+    if [ $? -ne 0 ]; then
+        echo "❌ Failed to load ${name} image"
+        exit 1
+    fi
+}
 
-# 이미지 로드 확인
-echo "Verifying images in Minikube..."
+# --- Build Eureka ---
+build_image "eureka" "../eureka-server" "../eureka-server/Dockerfile"
+
+# --- Build Gateway ---
+build_image "gateway" "../gateway" "../gateway/Dockerfile"
+
+echo "🔍 Verifying images in Minikube..."
 minikube image ls | grep -E "eureka|gateway"
 
-echo "All images have been built and loaded to Minikube successfully!" 
+echo "✅ All images have been built and loaded successfully!"
