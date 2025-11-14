@@ -10,18 +10,19 @@ build_image() {
     local path=$2
     local dockerfile=$3
 
-    echo "🚀 Building $name image..."
-    docker build -t ${name}:latest -f $dockerfile $path
-    if [ $? -ne 0 ]; then
-        echo "❌ Failed to build ${name} image"
-        exit 1
-    fi
+    # 절대 경로 계산
+    local abs_path
+    abs_path=$(realpath "$path")
+    local abs_dockerfile
+    abs_dockerfile=$(realpath "$dockerfile")
 
-    echo "📦 Loading $name image into Minikube..."
-    minikube image load ${name}:latest
-    if [ $? -ne 0 ]; then
-        echo "❌ Failed to load ${name} image"
-        exit 1
+    echo "🚀 Building $name image..."
+    docker build -t "${name}:latest" -f "$abs_dockerfile" "$abs_path"
+
+    echo "📦 Checking if $name image exists in Minikube..."
+    if ! minikube image ls | grep -q "^${name}:"; then
+        echo "⚠ $name image not found in Minikube, loading..."
+        minikube image load "${name}:latest"
     fi
 }
 
@@ -32,6 +33,9 @@ build_image "eureka" "../eureka-server" "../eureka-server/Dockerfile"
 build_image "gateway" "../gateway" "../gateway/Dockerfile"
 
 echo "🔍 Verifying images in Minikube..."
-minikube image ls | grep -E "eureka|gateway"
-
-echo "✅ All images have been built and loaded successfully!"
+if minikube image ls | grep -q "^eureka:" && minikube image ls | grep -q "^gateway:"; then
+    echo "✅ All images have been built and loaded successfully!"
+else
+    echo "❌ Some images are missing in Minikube!"
+    exit 1
+fi
